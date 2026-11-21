@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: wallet-ledger
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/wallet}
+    username: ${DB_USER:wallet}
+    password: ${DB_PASSWORD:wallet}
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none        # schema is owned by Flyway migrations
+  flyway:
+    enabled: true
+
+  # Redis (rate limiter)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # Kafka (transactional outbox relay)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer:   org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all          # wait for leader + all in-sync replicas
+      retries: 5
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 1
+
+app:
+  jwt:
+    # Must be at least 32 bytes. Override with JWT_SECRET in any real environment.
+    secret: ${JWT_SECRET:change-me-change-me-change-me-change-me-32b}
+    expiration-minutes: 60
+
+  outbox:
+    relay-interval-ms: 500   # how often the relay polls the outbox table
+
+  rate-limit:
+    write-limit:     20       # max requests per write window
+    write-window-ms: 10000    # 10 s window for /topup and /transfer
+    read-limit:      100      # max requests per read window
+    read-window-ms:  60000    # 60 s window for everything else
